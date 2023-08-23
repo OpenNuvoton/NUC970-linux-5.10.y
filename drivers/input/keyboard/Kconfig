@@ -781,7 +781,8 @@ config KEYBOARD_BCM
 
 config KEYBOARD_NUC970
 	tristate "NUC970 Matrix Keypad support"
-	depends on CPU_NUC970
+	depends on ARCH_NUC970
+	default y
 	select INPUT_MATRIXKMAP
 	select GPIO_NUC970
 	help

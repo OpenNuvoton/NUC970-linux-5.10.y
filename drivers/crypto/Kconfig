@@ -901,10 +901,11 @@ config CRYPTO_DEV_SA2UL
 	  K3 devices include a security accelerator engine that may be
 	  used for crypto offload.  Select this if you want to use hardware
 	  acceleration for cryptographic algorithms on these devices.
-	  
+
 config CRYPTO_DEV_NUC970
 	tristate "Support for NUC970 Cryptographic Accelerator"
-	depends on CPU_NUC970
+	depends on ARCH_NUC970
+	default y
 	select CRYPTO_CBC
 	select CRYPTO_ECB
 	select CRYPTO_AES
