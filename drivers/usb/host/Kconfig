@@ -213,6 +213,12 @@ config USB_EHCI_FSL
 	help
 	  Variation of ARC USB block used in some Freescale chips.
 
+config USB_NUC970_EHCI
+	tristate "Support for NUC970 EHCI (USB 2.0)"
+	depends on ARCH_NUC970
+	help
+	  Enables support for NUC970 USB EHCI controller.
+
 config USB_EHCI_MXC
 	tristate "Support for Freescale i.MX on-chip EHCI USB controller"
 	depends on ARCH_MXC || COMPILE_TEST
@@ -428,6 +434,12 @@ config USB_OHCI_HCD
 	  module will be called ohci-hcd.
 
 if USB_OHCI_HCD
+
+config USB_NUC970_OHCI
+	tristate "Support for NUC970 OHCI (USB 1.1)"
+	depends on ARCH_NUC970
+	help
+	  Enables support for NUC970 USB OHCI controller.
 
 config USB_OHCI_HCD_OMAP1
 	tristate "OHCI support for OMAP1/2 chips"

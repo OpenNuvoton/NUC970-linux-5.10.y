@@ -1,0 +1,3 @@
+config NUC970_CAN
+	depends on HAS_IOMEM
+	tristate "NUC970/N9H30 CAN0/CAN1 devices"

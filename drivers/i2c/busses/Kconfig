@@ -819,6 +819,13 @@ config I2C_NPCM7XX
 	  controller.
 	  Driver can also support slave mode (select I2C_SLAVE).
 
+config I2C_BUS_NUC970
+	tristate "NUC970/N9H30 I2C Driver"
+	depends on ARCH_NUC970
+	help
+	  Say Y here to include support for I2C controller in the
+	  Nuvoton NUC970/N9H30 based System-on-Chip devices.
+
 config I2C_OCORES
 	tristate "OpenCores I2C Controller"
 	help

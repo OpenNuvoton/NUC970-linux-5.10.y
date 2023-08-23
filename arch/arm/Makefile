@@ -227,6 +227,7 @@ machine-$(CONFIG_ARCH_VT8500)		+= vt8500
 machine-$(CONFIG_ARCH_ZX)		+= zx
 machine-$(CONFIG_ARCH_ZYNQ)		+= zynq
 machine-$(CONFIG_PLAT_SPEAR)		+= spear
+machine-$(CONFIG_ARCH_NUC970)           += nuc970
 
 # Platform directory name.  This list is sorted alphanumerically
 # by CONFIG_* macro name.

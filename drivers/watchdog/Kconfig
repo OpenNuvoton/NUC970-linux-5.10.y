@@ -669,6 +669,53 @@ config STMP3XXX_RTC_WATCHDOG
 	  the RTC for the STMP37XX/378X or i.MX23/28 SoC.
 	  To compile this driver as a module, choose M here: the
 	  module will be called stmp3xxx_rtc_wdt.
+	  
+config NUC970_WDT
+	tristate "Nuvoton NUC970/N9H30 Watchdog Timer"
+	depends on ARCH_NUC970
+	select WATCHDOG_CORE
+	help
+	  Say Y here if to include support for the watchdog timer
+	  for the Nuvoton NUC970/N9H30 series microprocessor
+	  To compile this driver as a module, choose M here: the
+	  module will be called nuc970_wdt.
+choice
+	prompt "Nuvoton NUC970/N9H30 Watchdog Timer clock source selection"
+	depends on NUC970_WDT
+	help
+	  Select watchdog clock source.
+
+	config NUC970_WDT_XIN32K
+		bool "XIN 32K"
+	config NUC970_WDT_PCLKDIV4096
+		bool "PCLK/4096"
+endchoice
+
+
+config NUC970_WDT_WKUP
+        tristate "NUC970/N9H30 WDT wake-up support"
+        depends on NUC970_WDT
+
+config NUC970_WWDT
+	tristate "Nuvoton NUC970/N9H30 Window Watchdog Timer"
+	depends on ARCH_NUC970
+	select WATCHDOG_CORE
+	help
+	  Say Y here if to include support for the window watchdog timer
+	  for the Nuvoton NUC970/N9H30 series microprocessor
+	  To compile this driver as a module, choose M here: the
+	  module will be called nuc970_wwdt.
+choice
+	prompt "Nuvoton NUC970/N9H30 Watchdog Timer clock source selection"
+	depends on NUC970_WWDT
+	help
+	  Select window watchdog clock source.
+
+	config NUC970_WWDT_XIN32K
+		bool "XIN 32K"
+	config NUC970_WWDT_PCLKDIV4096
+		bool "PCLK/4096"
+endchoice
 
 config TS4800_WATCHDOG
 	tristate "TS-4800 Watchdog"

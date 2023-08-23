@@ -57,3 +57,8 @@ obj-$(CONFIG_HABANA_AI)		+= habanalabs/
 obj-$(CONFIG_UACCE)		+= uacce/
 obj-$(CONFIG_XILINX_SDFEC)	+= xilinx_sdfec.o
 obj-$(CONFIG_HISI_HIKEY_USB)	+= hisi_hikey_usb.o
+obj-$(CONFIG_NUC970_GE2D)	+= nuc970_ge2d.o
+obj-$(CONFIG_NUC970_ETIMER)     += nuc970-etimer.o
+obj-$(CONFIG_NUC970_SC)         += nuc970-sc.o sc-util.o sc-t0.o sc-t1.o
+obj-$(CONFIG_NUC970_EBI)        += nuc970-ebi.o
+

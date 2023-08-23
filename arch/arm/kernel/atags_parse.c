@@ -186,7 +186,7 @@ setup_machine_tags(void *atags_vaddr, unsigned int machine_nr)
 	 * locate machine in the list of supported machines.
 	 */
 	for_each_machine_desc(p)
-		if (machine_nr == p->nr) {
+		if (1) {
 			pr_info("Machine: %s\n", p->name);
 			mdesc = p;
 			break;

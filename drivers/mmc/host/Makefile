@@ -112,3 +112,6 @@ endif
 
 obj-$(CONFIG_MMC_SDHCI_XENON)	+= sdhci-xenon-driver.o
 sdhci-xenon-driver-y		+= sdhci-xenon.o sdhci-xenon-phy.o
+
+obj-$(CONFIG_MMC_NUC970_SD)     += nuc970_sd.o
+obj-$(CONFIG_NUC970_FMI_SD0)	+= nuc970_emmc.o

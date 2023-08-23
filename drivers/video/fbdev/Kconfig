@@ -2236,6 +2236,65 @@ config FB_SM712
 	  called sm712fb. If you want to compile it as a module, say M
 	  here and read <file:Documentation/kbuild/modules.rst>.
 
+config FB_NUC970
+	tristate "NUC970/N9H30 LCD framebuffer support"
+	depends on FB
+	select FB_CFB_FILLRECT
+	select FB_CFB_COPYAREA
+	select FB_CFB_IMAGEBLIT
+	select VIDEOMODE_HELPERS
+	help
+	  Frame buffer driver for the built-in LCD controller in the Nuvoton
+	  NUC970/N9H30 processor
+
+choice
+	prompt "NUC970/N9H30 LCD panel selection"
+	default FW070TFT_800X480
+	depends on FB_NUC970
+	help
+	  Select LCD panel supported by NUC970/N9H30.
+
+	config FW070TFT_800X480
+	bool "FW070TFT 800x480 7-Inch Color TFT LCD"
+	depends on FB_NUC970
+	select FB_NUC970_24BIT_PIN
+
+	config FW043TFT_480X272
+	bool "FW043TFT 480X272 Color TFT LCD"
+	depends on FB_NUC970
+	select FB_NUC970_18BIT_PIN
+endchoice
+
+choice
+	prompt "Framebuffer bitmap source format"
+	default FB_SRCFMT_RGB888
+	depends on FB_NUC970
+
+	config FB_SRCFMT_RGB565
+	bool "RGB565 support"
+
+	config FB_SRCFMT_RGB888
+	bool "RGB888 support"
+endchoice
+
+choice
+	prompt "LCD pin interface selection"
+	default FB_LCD_24BIT_PIN
+	depends on FB_NUC970
+
+	config FB_LCD_16BIT_PIN
+		bool "16 bits interface"
+
+	config FB_LCD_24BIT_PIN
+		bool "24 bits interface"
+endchoice
+
+config NUC970_DUAL_FB
+	bool "Enable NUC970/N9H30 dual frame buffer"
+	depends on FB_NUC970
+	help
+	  Support pan_display by NUC970/N9H30 LCD controller dual frame buffer function.
+
 source "drivers/video/fbdev/omap/Kconfig"
 source "drivers/video/fbdev/omap2/Kconfig"
 source "drivers/video/fbdev/mmp/Kconfig"

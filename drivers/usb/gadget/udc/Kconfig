@@ -218,6 +218,12 @@ config USB_PXA27X
 	   dynamically linked module called "pxa27x_udc" and force all
 	   gadget drivers to also be dynamically linked.
 
+config USB_NUC970
+	tristate "NUC970 USB Device Controller"
+	depends on ARCH_NUC970
+	help
+	  On-chip USB Device Controller of Nuvoton NUC970.
+
 config USB_S3C2410
 	tristate "S3C2410 USB Device Controller"
 	depends on ARCH_S3C24XX

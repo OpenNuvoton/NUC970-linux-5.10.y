@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: GPL-2.0-only
+##
+## NUC970/N9H30 series I2S API
+##
+config SND_SOC_NUC970
+	tristate "SoC Audio for NUC970/N9H30 series"
+	depends on ARCH_NUC970
+	select SND_SOC_GENERIC_DMAENGINE_PCM
+	help
+	  This option enables support for I2S on the NUC970/N9H30 SoC.
+
+##
+## Boards
+##
+config SND_SOC_NUC970EVB
+	tristate "NUC970/N9H30 I2S support for demo board"
+	depends on SND_SOC_NUC970
+	select SND_SOC_NAU8822
+	help
+	  Select this option to enable audio (I2S) on the
+	  NUC970/N9H30 demo board.
+
+

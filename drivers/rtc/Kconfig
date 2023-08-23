@@ -1285,6 +1285,18 @@ config RTC_DRV_AB8500
 	  Select this to enable the ST-Ericsson AB8500 power management IC RTC
 	  support. This chip contains a battery- and capacitor-backed RTC.
 
+config RTC_DRV_NUC970
+	tristate "NUC970/N9H30 RTC driver"
+	help
+	  If you say yes here you get support for the RTC subsystem of the
+	  NUC970/N9H30 used in embedded systems.
+
+config ENABLE_RTC_WAKEUP
+	bool "Enable RTC wake-up function"
+	depends on RTC_DRV_NUC970
+	help
+	  This selects NUC970/N9H30 RTC wake-up function
+
 config RTC_DRV_OPAL
 	tristate "IBM OPAL RTC driver"
 	depends on PPC_POWERNV

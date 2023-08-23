@@ -374,6 +374,17 @@ config ARCH_EP93XX
 	help
 	  This enables support for the Cirrus EP93xx series of CPUs.
 
+config ARCH_NUC970
+	bool "Nuvoton NUC970/N9H30 CPU"
+	select ARCH_REQUIRE_GPIOLIB
+	select CLKDEV_LOOKUP
+	select CPU_ARM926T
+	select CLKSRC_MMIO
+	select GENERIC_CLOCKEVENTS
+	select PINCTRL
+	help
+         Support for Nuvoton NUC970/N9H30 Series MPUs.
+
 config ARCH_FOOTBRIDGE
 	bool "FootBridge"
 	select CPU_SA110
@@ -748,6 +759,8 @@ source "arch/arm/mach-vt8500/Kconfig"
 source "arch/arm/mach-zx/Kconfig"
 
 source "arch/arm/mach-zynq/Kconfig"
+
+source "arch/arm/mach-nuc970/Kconfig"
 
 # ARMv7-M architecture
 config ARCH_EFM32

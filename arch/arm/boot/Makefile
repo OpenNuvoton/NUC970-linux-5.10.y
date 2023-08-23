@@ -59,7 +59,12 @@ $(obj)/xipImage: FORCE
 
 $(obj)/Image: vmlinux FORCE
 	$(call if_changed,objcopy)
-
+ifeq ($(CONFIG_CPU_NUC970),y)
+	cp $@   ../image/970image
+endif
+ifeq ($(CONFIG_CPU_N9H30),y)
+	cp $@   ../image/n9h30image
+endif
 $(obj)/compressed/vmlinux: $(obj)/Image FORCE
 	$(Q)$(MAKE) $(build)=$(obj)/compressed $@
 

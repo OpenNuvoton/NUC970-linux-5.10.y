@@ -214,9 +214,19 @@ static int alg_setkey(struct sock *sk, sockptr_t ukey, unsigned int keylen)
 		return -ENOMEM;
 
 	err = -EFAULT;
-	if (copy_from_sockptr(key, ukey, keylen))
-		goto out;
 
+	if ((keylen == 0) || (keylen == 1) || (keylen == 17) || (keylen == 18)) {
+		/* 
+		 *  0: ALG_MTP_LOCK
+		 *  1: ALG_MTP_STATUS
+		 *  17: ALG_USE_MTP_KEY
+		 *  18: ALG_USE_REG_KEY
+		 */
+		key[0] = keylen;
+	} else {
+		if (copy_from_sockptr(key, ukey, keylen))
+			goto out;
+	}
 	err = type->setkey(ask->private, key, keylen);
 
 out:
@@ -245,6 +255,7 @@ static int alg_setsockopt(struct socket *sock, int level, int optname,
 
 	switch (optname) {
 	case ALG_SET_KEY:
+	case ALG_MTP_PROGRAM:
 		if (sock->state == SS_CONNECTED)
 			goto unlock;
 		if (!type->setkey)
@@ -252,6 +263,7 @@ static int alg_setsockopt(struct socket *sock, int level, int optname,
 
 		err = alg_setkey(sk, optval, optlen);
 		break;
+
 	case ALG_SET_AEAD_AUTHSIZE:
 		if (sock->state == SS_CONNECTED)
 			goto unlock;
@@ -259,6 +271,43 @@ static int alg_setsockopt(struct socket *sock, int level, int optname,
 			goto unlock;
 		err = type->setauthsize(ask->private, optlen);
 		break;
+
+	case ALG_MTP_LOCK:
+		if (sock->state == SS_CONNECTED)
+			goto unlock;
+		if (!type->setkey)
+			goto unlock;
+
+		err = alg_setkey(sk, optval, 0);
+		break;
+
+	case ALG_MTP_STATUS:
+		if (sock->state == SS_CONNECTED)
+			goto unlock;
+		if (!type->setkey)
+			goto unlock;
+
+		err = alg_setkey(sk, optval, 1);
+		break;
+
+	case ALG_USE_MTP_KEY:
+		if (sock->state == SS_CONNECTED)
+			goto unlock;
+		if (!type->setkey)
+			goto unlock;
+
+		err = alg_setkey(sk, optval, 17);
+		break;
+
+	case ALG_USE_REG_KEY:
+		if (sock->state == SS_CONNECTED)
+			goto unlock;
+		if (!type->setkey)
+			goto unlock;
+
+		err = alg_setkey(sk, optval, 18);
+		break;
+
 	case ALG_SET_DRBG_ENTROPY:
 		if (sock->state == SS_CONNECTED)
 			goto unlock;

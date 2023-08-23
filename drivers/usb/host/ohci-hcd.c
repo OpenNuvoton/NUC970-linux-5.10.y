@@ -1246,6 +1246,11 @@ MODULE_AUTHOR (DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESC);
 MODULE_LICENSE ("GPL");
 
+#ifdef CONFIG_USB_NUC970_OHCI
+#include "ohci-nuc970.c"
+#define OF_PLATFORM_DRIVER	ohci_hcd_nuc970_driver
+#endif
+
 #if defined(CONFIG_ARCH_SA1100) && defined(CONFIG_SA1111)
 #include "ohci-sa1111.c"
 #define SA1111_DRIVER		ohci_hcd_sa1111_driver

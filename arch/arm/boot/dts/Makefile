@@ -1410,3 +1410,8 @@ dtb-$(CONFIG_ARCH_ASPEED) += \
 	aspeed-bmc-opp-zaius.dtb \
 	aspeed-bmc-portwell-neptune.dtb \
 	aspeed-bmc-quanta-q71l.dtb
+dtb-$(CONFIG_ARCH_NUC970) += \
+	nuc972-evb.dtb \
+	numaker-hmi-n9h30.dtb \
+	n9h30-nudesign.dtb 
+
