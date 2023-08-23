@@ -41,11 +41,12 @@ extern int nuc970_sys_suspend_sz;
 
 static int nuc970_suspend_enter(suspend_state_t state)
 {
-	u32 upll_div;
-	#ifdef PM_FROM_SRAM
+#ifdef PM_FROM_SRAM
 	int (*nuc970_suspend_ptr) (int,int,int,int);
 	void *sram_swap_area;
-	#endif
+#else
+	u32 upll_div;
+#endif
 
 	if(state != PM_SUSPEND_MEM)
 		return -EINVAL;

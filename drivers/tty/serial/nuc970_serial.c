@@ -240,17 +240,16 @@ static void nuc970serial_start_tx(struct uart_port *port)
 {
 	struct uart_nuc970_port *up = (struct uart_nuc970_port *)port;
 	unsigned int ier;
-	struct tty_struct *tty = up->port.state->port.tty;
 
 	if (up->rs485.flags & SER_RS485_ENABLED)
 		rs485_stop_rx(up);
 
-    #if 0
+#if 0
 	if (!((ier = serial_in(up, UART_REG_IER)) & THRE_IEN)) {
 		ier |= THRE_IEN;
 		serial_out(up, UART_REG_IER, ier);
 	}
-	#else
+#else
 	{
 	struct circ_buf *xmit = &up->port.state->xmit;
 	ier = serial_in(up, UART_REG_IER);
@@ -259,7 +258,7 @@ static void nuc970serial_start_tx(struct uart_port *port)
 		transmit_chars(up);
 	serial_out(up, UART_REG_IER, ier | THRE_IEN);
 	}
-	#endif
+#endif
 
 }
 
@@ -1294,7 +1293,7 @@ static int nuc970serial_probe(struct platform_device *pdev)
 	int ret, i;
 
 #ifdef CONFIG_USE_OF
-	struct pinctrl *pinctrl;
+	// struct pinctrl *pinctrl;
 	u32   val32[2];
 #else
 	int retval;
