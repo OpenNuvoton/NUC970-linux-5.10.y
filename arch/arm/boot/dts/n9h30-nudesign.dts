@@ -21,6 +21,22 @@
 		bootargs = "root=/dev/ram0 console=ttyS0,115200n8 rdinit=/sbin/init mem=64M lpj=744448";
 	};
 
+	reserved-memory {
+		ranges;
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		display_buf: display_buf@0 { /* 800 x 480 x 4 x 2 = 0x2EE000 (RGB888 dual buffer) */
+			reg = <0x3D12000 0x2EE000>;
+			no-map;
+		};
+
+		ge2d_buf: ge2d_buf@0 { /* 800 x 480 x 4 = 0x177000 (RGB888 dual buffer) */
+			reg = <0x3B9B000 0x177000>;
+			no-map;
+		};
+	};
+
 	apb {
 		uart1: serial@b8000100 {
 			status = "disabled";
@@ -220,6 +236,11 @@
 
 		};
 
+		ge2d@b000b000 {
+			status = "okay";
+			memory-region = <&ge2d_buf>;
+		};
+
 		i2s: i2s@b0009000 {
 			status = "disabled";
 		};
@@ -232,10 +253,6 @@
 			compatible = "nuvoton,nuc970-audio";
 			i2s-controller = <&i2s>;
 			i2s-platform = <&i2s_pcm>;
-		};
-
-		ge2d@b000b000 {
-			status = "okay";
 		};
 	};
 };
