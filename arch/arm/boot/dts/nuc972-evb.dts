@@ -76,8 +76,8 @@
 
 		adc: adc@b800a000 {
 			keypad-status = "disabled";
-			touch-status = "disabled";
-			status = "disabled";
+			touch-status = "okay";
+			status = "okay";
 		};
 		
 		nadc: nadc@b800a000 {
@@ -89,7 +89,7 @@
 		};
 
 		i2c0: i2c0@b8006000 {
-			status = "disabled";
+			status = "okay";
 
 			nau8822: nau8822@1a {
 				compatible = "nuvoton,nau8822";
@@ -224,18 +224,18 @@
 		};
 
 		i2s: i2s@b0009000 {
-			status = "disabled";
+			status = "okay";
 		};
 
 		i2s_pcm: i2s_pcm {
-			status = "disabled";
+			status = "okay";
 		};
 
 		sound {
 			compatible = "nuvoton,nuc970-audio";
 			i2s-controller = <&i2s>;
 			i2s-platform = <&i2s_pcm>;
-			status = "disabled";
+			status = "okay";
 		};
 	};
 };

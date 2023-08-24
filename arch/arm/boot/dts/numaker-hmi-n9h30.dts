@@ -89,7 +89,7 @@
 		};
 
 		i2c0: i2c0@b8006000 {
-			status = "disabled";
+			status = "okay";
 
 			nau8822: nau8822@1a {
 				compatible = "nuvoton,nau8822";
@@ -225,11 +225,11 @@
 		};
 
 		i2s: i2s@b0009000 {
-			status = "disabled";
+			status = "okay";
 		};
 
 		i2s_pcm: i2s_pcm {
-			status = "disabled";
+			status = "okay";
 		};
 
 		sound {
