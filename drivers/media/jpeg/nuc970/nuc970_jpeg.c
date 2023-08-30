@@ -440,7 +440,7 @@ static void jpegcodec_release_priv (jpeg_priv_t *priv)
 							
 		for (i = 0; i < priv->nr_pages; i ++)
 		    // page_cache_release (priv->pages[i]);  // linux-3.10
-			unpin_user_pages_dirty_lock(priv->pages, priv->nr_pages, true);
+			put_page(priv->pages[i]);
 
 		priv->nr_pages = 0;
 		kfree(priv->pages);
@@ -1154,8 +1154,8 @@ static long jpegcodec_ioctl(struct file *file, unsigned int cmd, unsigned long a
 
 		    mmap_read_lock(current->mm);
 
-		    ret1 = pin_user_pages((unsigned long)priv->decopw_vaddr, nr_pages,
-			     FOLL_WRITE | FOLL_LONGTERM, priv->pages, NULL);
+			ret1 = get_user_pages((unsigned long)priv->decopw_vaddr,
+					nr_pages, FOLL_WRITE, priv->pages, NULL);
 
 		    mmap_read_unlock(current->mm);
 		    
