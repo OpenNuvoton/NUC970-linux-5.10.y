@@ -214,6 +214,7 @@
 			status = "okay";
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_lcd_24bit>;
+			memory-region = <&display_buf>;
 			type = <0x200>;
 			bpp = <32>;
 			width = <800>;
