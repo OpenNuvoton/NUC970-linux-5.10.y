@@ -71,7 +71,7 @@
 		};
 
 		jpeg: jpeg@b000a000 {
-			status = "disabled";
+			status = "okay";
 		};
 
 		adc: adc@b800a000 {
