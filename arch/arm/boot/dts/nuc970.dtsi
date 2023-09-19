@@ -1180,7 +1180,7 @@
 			map-addr = <0xf800a000>;
 			clock-rate = <200000>;
 			enable-ts;
-			z_th = <10>; /* z-axis threshold */
+			ts-pressure-threshold = <20>; /* z-axis threshold */
 			keypad-status = "disabled";
 			touch-status = "disabled";
 			status = "disabled";
