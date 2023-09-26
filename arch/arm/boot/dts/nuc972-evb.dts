@@ -27,7 +27,7 @@
 		#size-cells = <1>;
 
 		display_buf: display_buf@0 { /* 800 x 480 x 4 x 2 = 0x2EE000 (RGB888 dual buffer) */
-			reg = <0x3D12000 0x2EE000>;
+			reg = <0x2800000 0x2EE000>;
 			no-map;
 		};
 
