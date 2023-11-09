@@ -145,7 +145,7 @@
 			nand-ecc-mode = "hw_oob_first";
 			nand-ecc-algo = "bch";
 			nand-bus-width = <8>;
-			nand-ecc-strength = <8>;
+			nand-ecc-strength = <4>;
 			nand-ecc-step-size = <512>;
 			nand-on-flash-bbt;
 
