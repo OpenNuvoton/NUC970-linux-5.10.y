@@ -183,15 +183,22 @@ static inline int write_packet(struct nuc970_ep *ep, struct nuc970_request *req)
 	else	/* in-transfer */
 	{
 		usb_gadget_map_request(&udc->gadget, &req->req, ep->ep_dir);
-		buf = req->req.buf + req->req.actual;
-
 		if (len == 0)
 		{
 			__raw_writel(USB_EP_RSPCTL_ZEROLEN, udc->base + REG_USBD_EPA_EPRSPCTL+0x28*(ep->index-1));
 		}
 		else
 		{
+			while(1)
+			{
+				if (((u32)buf % 4) == 0)
+					break;
+				__raw_writeb(*buf++ & 0xff, udc->base + REG_USBD_EPA_EPDAT+0x28*(ep->index-1));
+				req->req.actual++;
+				len--;
+			}
 			dma_addr = dma_map_single(udc->gadget.dev.parent, buf, len, ep->ep_dir ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
+			dma_sync_single_for_device(udc->gadget.dev.parent, dma_addr, len, DMA_TO_DEVICE);
 			ret = dma_mapping_error(udc->gadget.dev.parent, dma_addr);
 			if (ret) {
 				dev_err(udc->gadget.dev.parent, "dma mapping error\n");
@@ -202,7 +209,6 @@ static inline int write_packet(struct nuc970_ep *ep, struct nuc970_request *req)
 						 udc->base + REG_USBD_DMACTL);// bulk in, write
 			__raw_writel(0, udc->base + REG_USBD_EPA_EPINTEN + (0x28* (ep->index-1)));
 			__raw_writel((USBD_BUSINTEN_DMADONEIEN | USBD_BUSINTEN_RSTIEN | USBD_BUSINTEN_SUSPENDIEN | USBD_BUSINTEN_VBUSDETIEN), udc->base + REG_USBD_BUSINTEN);
-			//__raw_writel((u32)(req->req.dma + req->req.actual), udc->base + REG_USBD_DMAADDR);
 			__raw_writel((u32)dma_addr, udc->base + REG_USBD_DMAADDR);//Tell DMA the memory physcal address
 			__raw_writel(len, udc->base + REG_USBD_DMACNT);
 			__raw_writel(0x20, udc->base + REG_USBD_BUSINTSTS);
@@ -264,31 +270,42 @@ static int write_fifo(struct nuc970_ep *ep, struct nuc970_request *req)
 static inline int read_packet(struct nuc970_ep *ep,u8 *buf, struct nuc970_request *req, u16 cnt)
 {
 	struct nuc970_udc *udc = ep->dev;
-	unsigned int data, i, ret;
+	unsigned int i, ret=cnt;
 	unsigned int volatile timeout;
 	dma_addr_t dma_addr;
-	unsigned int len = ep->ep.maxpacket;
 
 	if (ep->ep_num == 0)
 	{ //ctrl pipe don't use DMA
 
 		for (i=0; i<cnt; i++)
 		{
-			data = __raw_readb(udc->base + REG_USBD_CEPDAT);
-			*buf++ = data & 0xFF;
+			*buf++ = __raw_readb(udc->base + REG_USBD_CEPDAT) & 0xFF;
 		}
 		req->req.actual += cnt;
 	}
 	else	/* out-transfer */
 	{
+#if 0
+		for (i=0; i<cnt; i++)
+		{
+			*buf++ = __raw_readb(udc->base + REG_USBD_EPA_EPDAT+0x28*(ep->index-1)) & 0xff;
+		}
+		req->req.actual += cnt;
+#else
 		usb_gadget_map_request(&udc->gadget, &req->req, ep->ep_dir);
-
 		__raw_writel((__raw_readl(udc->base + REG_USBD_DMACTL) & 0xe0)|ep->ep_num, udc->base + REG_USBD_DMACTL);   //read
-//		__raw_writel((u32)(req->req.dma + req->req.actual), udc->base + REG_USBD_DMAADDR);
 
-		dma_addr = dma_map_single(udc->gadget.dev.parent, buf, len, ep->ep_dir ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
-		ret = dma_mapping_error(udc->gadget.dev.parent, dma_addr);
-		if (ret) {
+		while(1)
+		{
+			if (((u32)buf % 0x10) == 0)
+				break;
+			*buf++ = __raw_readb(udc->base + REG_USBD_EPA_EPDAT+0x28*(ep->index-1)) & 0xff;
+			req->req.actual++;
+			cnt--;
+		}
+
+		dma_addr = dma_map_single(udc->gadget.dev.parent, buf, cnt, ep->ep_dir ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
+		if (dma_mapping_error(udc->gadget.dev.parent, dma_addr)) {
 			dev_err(udc->gadget.dev.parent, "dma mapping error\n");
 			return -EINVAL;
 		}
@@ -316,8 +333,10 @@ static inline int read_packet(struct nuc970_ep *ep,u8 *buf, struct nuc970_reques
 			timeout++;
 		}
 		__raw_writel(0x20, udc->base + REG_USBD_BUSINTSTS);
-		dma_unmap_single(udc->gadget.dev.parent, dma_addr, len, ep->ep_dir ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
+		dma_sync_single_for_cpu(udc->gadget.dev.parent, dma_addr, cnt, DMA_FROM_DEVICE);
+		dma_unmap_single(udc->gadget.dev.parent, dma_addr, cnt, ep->ep_dir ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
 		req->req.actual += cnt;
+#endif
 	}
 
 	return cnt;
@@ -341,21 +360,13 @@ static int read_fifo(struct nuc970_ep *ep, struct nuc970_request *req, u16 cnt)
 		req->req.status = -EOVERFLOW;
 		cnt = bufferspace;
 	}
+
 	fifo_count = read_packet(ep, buf, req, cnt);
 
 	if (req->req.length == req->req.actual)
 		done(ep, req, 0);
 	else if (fifo_count && fifo_count < ep->ep.maxpacket)
-	{
 		done(ep, req, 0);
-		/* overflowed this request?  flush extra data */
-//		if (req->req.length != req->req.actual)
-//		{
-//			pr_devel("%s(): EOVERFLOW set\n", __FUNCTION__);
-//			if (req->req.short_not_ok)
-//				req->req.status = -EOVERFLOW;   //device read less then host write
-//		}
-	}
 	else
 		is_last = 0;
 
@@ -424,6 +435,17 @@ void paser_irq_cep(struct nuc970_udc *udc, u32 irq)
 	else
 		req = list_entry(ep->queue.next, struct nuc970_request, queue);
 
+	if (irq & USBD_CEPINTSTS_STSDONEIF)
+	{
+		__raw_writel(USBD_CEPINTEN_SETUPPKIEN, udc->base + REG_USBD_CEPINTEN);
+		udc_isr_update_dev(udc);
+		if (udc->setup_ret >= 0)
+		{
+			udc->ep0state=EP0_IDLE;
+			udc->setup_ret = 0;
+		}
+	}
+
 	if (irq & USBD_CEPINTSTS_SETUPPKIF)
 	{
 		udc->ep0state = EP0_IDLE;
@@ -486,17 +508,6 @@ void paser_irq_cep(struct nuc970_udc *udc, u32 irq)
 				else if (udc->ep0state != EP0_IDLE)
 					udc->ep0state=EP0_END_XFER;
 			}
-		}
-	}
-
-	if (irq & USBD_CEPINTSTS_STSDONEIF)
-	{
-		__raw_writel(USBD_CEPINTEN_SETUPPKIEN, udc->base + REG_USBD_CEPINTEN);
-		udc_isr_update_dev(udc);
-		if (udc->setup_ret >= 0)
-		{
-			udc->ep0state=EP0_IDLE;
-			udc->setup_ret = 0;
 		}
 	}
 }
@@ -566,7 +577,10 @@ void paser_irq_nep(struct nuc970_ep *ep, u32 irq)
 
 	if ((irq & USBD_EPINTSTS_RXPKIF) || (irq & USBD_EPINTSTS_SHORTRXIF))
 	{
-		__raw_writel(USBD_EPINTSTS_RXPKIF|USBD_EPINTSTS_SHORTRXIF, udc->base + REG_USBD_EPA_EPINTSTS + 0x28*(ep->index-1));
+		if (ep->index == 5)
+			__raw_writel(USBD_EPINTSTS_RXPKIF|USBD_EPINTSTS_SHORTRXIF|0x800, udc->base + REG_USBD_EPA_EPINTSTS + 0x28*(ep->index-1));
+		else
+			__raw_writel(USBD_EPINTSTS_RXPKIF|USBD_EPINTSTS_SHORTRXIF, udc->base + REG_USBD_EPA_EPINTSTS + 0x28*(ep->index-1));
 		if (req == NULL)
 		{
 			__raw_writel(0, udc->base + REG_USBD_EPA_EPINTEN + 0x28*(ep->index-1));
@@ -633,57 +647,37 @@ static irqreturn_t nuc970_udc_irq(int irq, void *_dev)
 }
 
 
-static s32 sram_data[13][2] = {{0,0x40}};
-
+static s32 sram[13][2] = {0};
 //0-3F for Ctrl pipe
-s32 get_sram_base(struct nuc970_udc *udc, u32 max)
+s32 get_sram_base(u32 idx, u32 max)
 {
-	int i, cnt = 1, j;
-	s32 start, end;
+	u32 i;
+	s32 sram_addr;
 
-	for (i = 1; i < NUC970_ENDPOINTS; i++)
+	if (max >= 512)
 	{
-		struct nuc970_ep *ep = &udc->ep[i];
-
-		start = __raw_readl(udc->base + REG_USBD_EPA_EPBUFSTART+0x28*(ep->index-1));
-		end = __raw_readl(udc->base + REG_USBD_EPA_EPBUFEND+0x28*(ep->index-1));
-		if (end - start > 0)
+		for (i=1; i<7; i++)
 		{
-				sram_data[cnt][0] = start;
-				sram_data[cnt][1] = end + 1;
-				cnt++;
+			if (sram[i][0] == 1)
+				continue;
+			sram[i][0] = 1;
+			sram[i][1] = idx;
+			sram_addr = 0x400 + (i - 1) * 0x200;
+			return sram_addr;
 		}
 	}
-	if (cnt == 1)
-		return 0x40;
-	//sorting from small to big
-	j= 1;
-	while ((j<cnt))
+	else
 	{
-		for (i=0; i<cnt -j; i++)
+		for (i=7; i<13; i++)
 		{
-			if (sram_data[i][0]>sram_data[i+1][0])
-			{
-				start = sram_data[i][0];
-				end = sram_data[i][1];
-				sram_data[i][0] = sram_data[i+1][0];
-				sram_data[i][1] = sram_data[i+1][1];
-				sram_data[i+1][0] = start;
-				sram_data[i+1][1] = end;
-			}
+			if (sram[i][0] == 1)
+				continue;
+			sram[i][0] = 1;
+			sram[i][1] = idx;
+			sram_addr = 0x40 + (i - 7) * 0x40;
+			return sram_addr;
 		}
-		j++;
 	}
-
-	for (i = 0; i< cnt-1; i++)
-	{
-		if (sram_data[i+1][0] - sram_data[i][1] >= max)
-			return sram_data[i][1];
-	}
-
-	if (0x1000 - sram_data[cnt-1][1] >= max)
-		return sram_data[cnt-1][1];
-
 	return -ENOBUFS;
 }
 
@@ -803,12 +797,22 @@ static int nuc970_ep_disable (struct usb_ep *_ep)
 {
 	struct nuc970_ep *ep = container_of(_ep, struct nuc970_ep, ep);
 	unsigned long flags;
+	s32 i = 1;
 
 	if (!_ep || !ep->ep.desc)
 		return -EINVAL;
 
 	spin_lock_irqsave(&ep->dev->lock, flags);
 	ep->ep.desc = 0;
+
+	while(1) {
+		if (sram[i][1] == ep->index) {
+			sram[i][0] = 0;
+			sram[i][1] = 0;
+			break;
+		}
+		i++;
+	}
 
 	__raw_writel(0, ep->dev->base + REG_USBD_EPA_EPCFG+0x28*(ep->index-1));
 	__raw_writel(0, ep->dev->base + REG_USBD_EPA_EPINTEN + 0x28*(ep->index-1));
@@ -1406,7 +1410,7 @@ static void udc_isr_ctrl_pkt(struct nuc970_udc *udc)
 
 	switch (udc->ep0state) {
 		case EP0_IDLE:
-			if (crq.bRequest == USB_REQ_GET_STATUS) {
+			if ((crq.bRequest == USB_REQ_GET_STATUS) && ((crq.bRequestType & 0x60) == 0x00)) {
 				unsigned char tmp = 0;
 				if ((crq.bRequestType == 0x80) || (crq.bRequestType == 0x81)) {
 					tmp = 0;
