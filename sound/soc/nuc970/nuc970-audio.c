@@ -72,7 +72,7 @@ static struct snd_soc_ops nuc970_audio_ops = {
 SND_SOC_DAILINK_DEFS(hifi,
                      DAILINK_COMP_ARRAY(COMP_CPU("b0009000.i2s")),
                      DAILINK_COMP_ARRAY(COMP_CODEC("nau8822.0-001a", "nau8822-hifi")),
-                     DAILINK_COMP_ARRAY(COMP_PLATFORM("b0009000.i2s")));
+                     DAILINK_COMP_ARRAY(COMP_PLATFORM("ahb:i2s_pcm")));
 
 static struct snd_soc_dai_link nuc970evb_i2s_dai = {
 	.name               =   "IIS",

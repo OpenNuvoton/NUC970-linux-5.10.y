@@ -255,6 +255,7 @@ static struct snd_soc_dai_ops nuc970_i2s_dai_ops = {
 };
 
 struct snd_soc_dai_driver nuc970_i2s_dai = {
+	.name		= "i2s_pcm",
 	.probe          = nuc970_i2s_probe,
 	.remove         = nuc970_i2s_remove,
 	.playback = {
