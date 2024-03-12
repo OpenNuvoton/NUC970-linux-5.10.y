@@ -13,6 +13,7 @@
 /dts-v1/;
 
 #include "nuc970.dtsi"
+#include <dt-bindings/input/input.h>
 / {
 	model = "Nuvoton N9H30 NuDesign";
 	compatible = "nuvoton,nuc972-evb", "nuvoton,nuc972", "nuvoton,nuc970";
@@ -137,12 +138,24 @@
 					label = "dtb";
 					reg = <0x00E00000 0x00010000>;
 				};
-				
+
 				partition@3 {
 					label = "rootfs";
 					reg = <0x00E10000 0x011f0000>;
 				};
 			};
+		};
+
+		keys: keys@b000b000 {
+			status = "disabled";
+			key-matrix = <3 2>;
+			gpio-keys-rows = <288
+							  289
+							  290>; /* PJ0, PJ1, PJ2 */
+			gpio-keys-cols = <291 292>;  /* PJ3, PJ4 */
+			key-code = <KEY_F1 KEY_F2
+						KEY_F3 KEY_F4
+						KEY_F5 KEY_F6>;
 		};
 
 	};

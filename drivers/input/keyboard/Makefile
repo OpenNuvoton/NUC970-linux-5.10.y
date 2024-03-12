@@ -71,3 +71,4 @@ obj-$(CONFIG_KEYBOARD_TM2_TOUCHKEY)	+= tm2-touchkey.o
 obj-$(CONFIG_KEYBOARD_TWL4030)		+= twl4030_keypad.o
 obj-$(CONFIG_KEYBOARD_XTKBD)		+= xtkbd.o
 obj-$(CONFIG_KEYBOARD_NUC970)		+= nuc970_keypad.o
+obj-$(CONFIG_KEYBOARD_NUC970_KEYS)	+= nuc970_keys.o

@@ -792,6 +792,19 @@ config KEYBOARD_NUC970
 	  To compile this driver as a module, choose M here: the
 	  module will be called nuc970_keypad.
 
+config KEYBOARD_NUC970_KEYS
+	tristate "N9H30 keys support"
+	depends on OF && ARCH_NUC970
+	select GPIO_NUC970
+	help
+	  Say Y here if you want to use Nuvoton keys.
+
+	  Normal GPIO keys mode or keypad matrix mode is determined by
+	  the configurations in device tree.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called nuc970-keys.
+
 config KEYBOARD_MTK_PMIC
 	tristate "MediaTek PMIC keys support"
 	depends on MFD_MT6397

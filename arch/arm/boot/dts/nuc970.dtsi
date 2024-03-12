@@ -1425,6 +1425,11 @@
 			status = "disabled";
 		};
 
+		keys: keys@b000b000 {
+			compatible = "nuvoton,nuc970-keys";
+			status = "disabled";
+		};
+
 	};  /* end of apb */
 
 	ahb {
