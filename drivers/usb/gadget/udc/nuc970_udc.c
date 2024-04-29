@@ -256,7 +256,7 @@ static int write_fifo(struct nuc970_ep *ep, struct nuc970_request *req)
 
 	/* last packet is often short (sometimes a zlp) */
 
-	if (req->req.length == req->req.actual/* && !req->req.zero*/)
+	if (((req->req.length == req->req.actual) && (len % ep->ep.maxpacket)) || (len == 0))
 	{
 		done(ep, req, 0);
 		return 1;
@@ -270,7 +270,7 @@ static int write_fifo(struct nuc970_ep *ep, struct nuc970_request *req)
 static inline int read_packet(struct nuc970_ep *ep,u8 *buf, struct nuc970_request *req, u16 cnt)
 {
 	struct nuc970_udc *udc = ep->dev;
-	unsigned int i, ret=cnt;
+	unsigned int i;
 	unsigned int volatile timeout;
 	dma_addr_t dma_addr;
 
@@ -715,7 +715,7 @@ static int nuc970_ep_enable (struct usb_ep *_ep, const struct usb_endpoint_descr
 		__raw_writel(max, udc->base + REG_USBD_EPA_EPMPS + 0x28*(ep->index-1));
 		ep->ep.maxpacket = max;
 
-		sram_addr = get_sram_base(udc, max);
+		sram_addr = get_sram_base(ep->index, max);
 
 		if (sram_addr < 0)
 			return sram_addr;
