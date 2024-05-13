@@ -1170,7 +1170,7 @@
 			eint5-config = <1 0 0>;
 			eint6-config = <1 0 0>;
 			eint7-config = <1 0 0>;
-			status = "disabled";
+			status = "okay";
 		};
 
 		adc: adc@b800a000 {
