@@ -98,29 +98,38 @@ static int nuc970_i2s_set_sysclk(struct snd_soc_dai *cpu_dai, int clk_id, unsign
 {
 	unsigned int val;
 	struct nuc970_audio *nuc970_audio = nuc970_i2s_data;
-	struct clk *clkmux, *clkapll, *clkaudio;
+	struct clk *clkmux, *clkaplldiv, *clkapll, *clkaudio;
 	int ret;
 	unsigned int mclkdiv, bclkdiv, mclk;
 
 	clkmux = clk_get(NULL, "audio_eclk_mux");
-		if (IS_ERR(clkmux)) {
-			printk(KERN_ERR "nuc970-audio:failed to get audio clock source\n");
-			ret = PTR_ERR(clkmux);
-			return ret;
-		}
-		clkapll = clk_get(NULL, "apll");
-		if (IS_ERR(clkapll)) {
-			printk(KERN_ERR "nuc970-audio:failed to get audio clock source\n");
-			ret = PTR_ERR(clkapll);
-			return ret;
-		}
+	if (IS_ERR(clkmux)) {
+		printk(KERN_ERR "nuc970-audio:failed to get audio clock source\n");
+		ret = PTR_ERR(clkmux);
+		return ret;
+	}
 
-		clkaudio = clk_get(NULL, "audio_eclk");
-		if (IS_ERR(clkaudio)) {
-			printk(KERN_ERR "nuc970-audio:failed to get audio clock source\n");
-			ret = PTR_ERR(clkaudio);
-			return ret;
-		}
+	clkaplldiv = clk_get(NULL, "audio_aplldiv");
+	if (IS_ERR(clkaplldiv)) {
+		printk(KERN_ERR "nuc970-audio:failed to get audio clock source\n");
+		ret = PTR_ERR(clkaplldiv);
+		return ret;
+	}
+
+	clkapll = clk_get(NULL, "apll");
+	if (IS_ERR(clkapll)) {
+		printk(KERN_ERR "nuc970-audio:failed to get audio clock source\n");
+		ret = PTR_ERR(clkapll);
+		return ret;
+	}
+
+	clkaudio = clk_get(NULL, "audio_eclk");
+	if (IS_ERR(clkaudio)) {
+		printk(KERN_ERR "nuc970-audio:failed to get audio clock source\n");
+		ret = PTR_ERR(clkaudio);
+		return ret;
+	}
+
 
 	if (clk_id == NUC970_AUDIO_SAMPLECLK) {
 		val = AUDIO_READ(nuc970_audio->mmio + ACTL_I2SCON);
@@ -142,7 +151,7 @@ static int nuc970_i2s_set_sysclk(struct snd_soc_dai *cpu_dai, int clk_id, unsign
 		//use APLL to generate 12.288MHz ,16.934MHz or 11.285Mhz for I2S
 		//input source clock is XIN=12Mhz
 
-		clk_set_parent(clkmux, clkapll);
+		clk_set_parent(clkmux, clkaplldiv);
 
 		if ((freq % 8000 == 0) && (freq != 32000)) {
 			//12.288MHz ==> APLL=98.4MHz / 8 = 12.3MHz

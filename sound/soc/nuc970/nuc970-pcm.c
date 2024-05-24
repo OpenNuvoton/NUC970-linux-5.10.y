@@ -168,6 +168,7 @@ static int nuc970_dma_prepare(struct snd_soc_component *component,
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			val &= ~(PLAY_LEFT_CHNNEL | PLAY_RIGHT_CHNNEL);
 			val |= PLAY_RIGHT_CHNNEL;
+			val |= (PLAY_LEFT_CHNNEL | PLAY_RIGHT_CHNNEL);
 		} else {
 			val &= ~(RECORD_LEFT_CHNNEL | RECORD_RIGHT_CHNNEL);
 			val |= RECORD_LEFT_CHNNEL;
