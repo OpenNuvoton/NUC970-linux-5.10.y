@@ -742,7 +742,7 @@ nuc970serial_type(struct uart_port *port)
 }
 
 /* Enable or disable the rs485 support */
-void nuc970serial_config_rs485(struct uart_port *port, struct serial_rs485 *rs485conf)
+static int nuc970serial_config_rs485(struct uart_port *port, struct serial_rs485 *rs485conf)
 {
 	struct uart_nuc970_port *p = to_nuc970_uart_port(port);
 
@@ -790,6 +790,8 @@ void nuc970serial_config_rs485(struct uart_port *port, struct serial_rs485 *rs48
 	}
 
 	spin_unlock(&port->lock);
+
+	return 0;
 }
 
 static int
@@ -1353,6 +1355,8 @@ static int nuc970serial_probe(struct platform_device *pdev)
 	if (p->serial_out)
 		up->port.serial_out = p->serial_out;
 #endif
+
+	up->port.rs485_config = nuc970serial_config_rs485;
 
 	ret = uart_add_one_port(&nuc970serial_reg, &up->port);
 
