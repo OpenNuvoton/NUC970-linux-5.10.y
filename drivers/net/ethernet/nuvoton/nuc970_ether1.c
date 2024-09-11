@@ -1481,9 +1481,10 @@ static int nuc970_get_ts_info(struct net_device *netdev, struct ethtool_ts_info 
 
 static int nuc970_change_mtu(struct net_device *netdev, int new_mtu)
 {
+#if (IS_VLAN == 0)
 	if(new_mtu < 64 || new_mtu > MAX_PACKET_SIZE)
 		return -EINVAL;
-
+#endif
 	netdev->mtu = new_mtu;
 
 	if(new_mtu < 1518)
@@ -1712,6 +1713,8 @@ static int nuc970_ether_probe(struct platform_device *pdev)
 	netdev->tx_queue_len = 32;
 	netdev->dma = 0x0;
 	netdev->watchdog_timeo = TX_TIMEOUT;
+	netdev->min_mtu = 64;
+	netdev->max_mtu = 2048;
 
 	get_mac_address(netdev);
 
