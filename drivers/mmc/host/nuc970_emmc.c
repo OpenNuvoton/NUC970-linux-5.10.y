@@ -59,12 +59,6 @@
 #define EMMC_EVENT_CLK_KEEP0  0x00001000
 #define EMMC_EVENT_CLK_KEEP1  0x00010000
 
-static volatile int emmc_event = 0, emmc_state = 0, emmc_state_xfer =
-    0, emmc_ri_timeout = 0, emmc_send_cmd = 0;
-static DECLARE_WAIT_QUEUE_HEAD(emmc_event_wq);
-static DECLARE_WAIT_QUEUE_HEAD(emmc_wq);
-static DECLARE_WAIT_QUEUE_HEAD(emmc_wq_xfer);
-
 /*
  * Low level type for this driver
  */
@@ -102,6 +96,10 @@ struct nuc970_emmc_host {
 	/* Timer for timeouts */
 	struct timer_list timer;
 };
+
+static volatile int emmc_event = 0, emmc_state_xfer = 0, emmc_ri_timeout = 0;
+static DECLARE_WAIT_QUEUE_HEAD(emmc_wq_xfer);
+static int emmc_event_thread(struct nuc970_emmc_host *sd_host);
 
 struct nuc970_emmc_host *emmc_host;
 
@@ -244,7 +242,6 @@ static void nuc970_emmc_post_dma_read(struct nuc970_emmc_host *host)
  */
 static void nuc970_emmc_handle_transmitted(struct nuc970_emmc_host *host)
 {
-	//nuc970_emmc_debug("Handling the transmit\n");
 	if (nuc970_emmc_read(REG_EMMCISR) & EMMCISR_CRC_IF)
 		nuc970_emmc_write(REG_EMMCISR, EMMCISR_CRC_IF);
 
@@ -281,9 +278,7 @@ static void nuc970_emmc_enable(struct nuc970_emmc_host *host)
 	nuc970_emmc_write(REG_NAND_DMACCSR, DMACCSR_DMAC_EN);	// enable DMAC for FMI
 	nuc970_emmc_write(REG_NAND_FMICSR, FMICSR_EMMCEN);	/* Enable SD functionality of FMI */
 	nuc970_emmc_write(REG_EMMCISR, 0xffffffff);
-	nuc970_emmc_write(REG_EMMCCSR,
-			  (nuc970_emmc_read(REG_EMMCCSR) & ~0xfff0000) |
-			  0x09010000);
+	nuc970_emmc_write(REG_EMMCCSR, (nuc970_emmc_read(REG_EMMCCSR) & ~0xfff0000) | 0x09010000);
 }
 
 /*
@@ -294,8 +289,7 @@ static void nuc970_emmc_disable(struct nuc970_emmc_host *host)
 	nuc970_emmc_write(REG_NAND_DMACCSR, DMACCSR_DMAC_EN | DMACCSR_SWRST);	//enable DMAC for FMI
 	nuc970_emmc_write(REG_NAND_FMICSR, FMICSR_SWRST);	/* Enable EMMC functionality of FMI */
 	nuc970_emmc_write(REG_EMMCISR, 0xffffffff);
-	nuc970_emmc_write(REG_NAND_FMICSR,
-			  nuc970_emmc_read(REG_NAND_FMICSR) & ~FMICSR_EMMCEN);
+	nuc970_emmc_write(REG_NAND_FMICSR, nuc970_emmc_read(REG_NAND_FMICSR) & ~FMICSR_EMMCEN);
 }
 
 /*
@@ -311,18 +305,14 @@ static void nuc970_emmc_send_command(struct nuc970_emmc_host *host,
 
 	host->cmd = cmd;
 	emmc_host = host;
-	emmc_state = 0;
 	emmc_state_xfer = 0;
 
 	if (nuc970_emmc_read(REG_NAND_FMICSR) != FMICSR_EMMCEN)
 		nuc970_emmc_write(REG_NAND_FMICSR, FMICSR_EMMCEN);
-
 	csr = nuc970_emmc_read(REG_EMMCCSR) & 0xff00c080;
-
 	csr = csr & ~0x80;
 	csr = csr | (cmd->opcode << 8) | EMMCCSR_CO_EN;	// set command code and enable command out
 	emmc_event |= EMMC_EVENT_CMD_OUT;
-
 	if (host->bus_mode == MMC_BUS_WIDTH_4)
 		csr |= EMMCCSR_DBW;
 
@@ -345,11 +335,9 @@ static void nuc970_emmc_send_command(struct nuc970_emmc_host *host,
 		nuc970_emmc_write(REG_EMMCIER, nuc970_emmc_read(REG_EMMCIER) | EMMCIER_BLKD_IE);	//Enable EMMC interrupt
 		block_length = data->blksz;
 		blocks = data->blocks;
-
 		nuc970_emmc_write(REG_EMMCBLEN, block_length - 1);
 		if ((block_length > 512) || (blocks >= 256))
-			printk
-			    ("ERROR: don't support read/write 256 blocks in on CMD\n");
+			printk("ERROR: don't support read/write 256 blocks in on CMD\n");
 		else
 			csr = (csr & ~0x00ff0000) | (blocks << 16);
 	} else {
@@ -361,32 +349,24 @@ static void nuc970_emmc_send_command(struct nuc970_emmc_host *host,
 	/*
 	 * Set the arguments and send the command
 	 */
-	nuc970_emmc_debug
-	    ("Sending command %d as 0x%0X, arg = 0x%08X, blocks = %d, length = %d\n",
-	     cmd->opcode, csr, cmd->arg, blocks, block_length);
+	nuc970_emmc_debug("Sending command %d as 0x%0X, arg = 0x%08X, blocks = %d, length = %d\n",
+			cmd->opcode, csr, cmd->arg, blocks, block_length);
 
 	if (data) {
 		data->bytes_xfered = 0;
 		host->transfer_index = 0;
 		host->in_use_index = 0;
 		if (data->flags & MMC_DATA_READ) {
-			/*
-			 * Handle a read
-			 */
 			nuc970_emmc_write(REG_EMMCTMOUT, 0x3fffff);
 			host->total_length = 0;
-			nuc970_emmc_write(REG_NAND_DMACSAR,
-					  host->physical_address);
-			nuc970_emmc_debug
-			    ("EMMC - Reading %d bytes [phy_addr = 0x%x]\n",
+			nuc970_emmc_write(REG_NAND_DMACSAR, host->physical_address);
+			nuc970_emmc_debug("EMMC - Reading %d bytes [phy_addr = 0x%x]\n",
 			     block_length * blocks, host->physical_address);
 		} else if (data->flags & MMC_DATA_WRITE) {
 			host->total_length = block_length * blocks;
 			nuc970_emmc_sg_to_dma(host, data);
-			nuc970_emmc_debug("EMMC - Transmitting %d bytes\n",
-					  host->total_length);
-			nuc970_emmc_write(REG_NAND_DMACSAR,
-					  host->physical_address);
+			nuc970_emmc_debug("EMMC - Transmitting %d bytes\n", host->total_length);
+			nuc970_emmc_write(REG_NAND_DMACSAR, host->physical_address);
 			csr = csr | EMMCCSR_DO_EN;
 		}
 	}
@@ -396,9 +376,7 @@ static void nuc970_emmc_send_command(struct nuc970_emmc_host *host,
 	 */
 	nuc970_emmc_write(REG_EMMCARG, cmd->arg);
 	nuc970_emmc_write(REG_EMMCCSR, csr);
-	emmc_send_cmd = 1;
-	wake_up_interruptible(&emmc_event_wq);
-	wait_event_interruptible(emmc_wq, (emmc_state != 0));
+	emmc_event_thread(host);
 
 	if (data) {
 		if (data->flags & MMC_DATA_WRITE) {
@@ -426,7 +404,6 @@ static void nuc970_emmc_send_stop(struct nuc970_emmc_host *host,
 
 	host->cmd = cmd;
 	emmc_host = host;
-	emmc_state = 0;
 	emmc_state_xfer = 0;
 
 	if (nuc970_emmc_read(REG_NAND_FMICSR) != FMICSR_EMMCEN)
@@ -462,8 +439,7 @@ static void nuc970_emmc_send_stop(struct nuc970_emmc_host *host,
 
 	nuc970_emmc_write(REG_EMMCARG, cmd->arg);
 	nuc970_emmc_write(REG_EMMCCSR, csr);
-	emmc_send_cmd = 1;
-	wake_up_interruptible(&emmc_event_wq);
+	emmc_event_thread(host);
 
 	mmc_request_done(host->mmc, host->request);
 }
@@ -480,8 +456,6 @@ static void nuc970_emmc_send_request(struct nuc970_emmc_host *host)
 		host->flags |= FL_SENT_STOP;
 		nuc970_emmc_send_stop(host, host->request->stop);
 	} else {
-		emmc_state = 1;
-		wake_up_interruptible(&emmc_wq);
 		del_timer(&host->timer);
 	}
 }
@@ -583,26 +557,22 @@ static void nuc970_emmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	/* maybe switch power to the card */
 	switch (ios->power_mode) {
-	case MMC_POWER_OFF:
-		nuc970_emmc_write(REG_NAND_FMICSR, 0);
-		break;
 	case MMC_POWER_UP:
 	case MMC_POWER_ON:	// enable 74 clocks
 		nuc970_emmc_write(REG_NAND_FMICSR, 0x2);
-
 		if (ios->clock == 0)
 			return;
 
 		if (ios->clock <= 400000) {
 			clk_set_rate(host->upll_clk, 100000000);
 			clk_set_rate(host->emmc_clk, ios->clock);
-			nuc970_emmc_write(REG_EMMCCSR,
-					  nuc970_emmc_read(REG_EMMCCSR) |
-					  EMMCCSR_CLK74_OE);
-			while (nuc970_emmc_read(REG_EMMCCSR) &
-			       EMMCCSR_CLK74_OE) ;
+			nuc970_emmc_write(REG_EMMCCSR, nuc970_emmc_read(REG_EMMCCSR) | EMMCCSR_CLK74_OE);
+			while (nuc970_emmc_read(REG_EMMCCSR) & EMMCCSR_CLK74_OE) ;
 		} else
 			clk_set_rate(host->emmc_clk, ios->clock);
+		break;
+	case MMC_POWER_OFF:
+		nuc970_emmc_write(REG_NAND_FMICSR, 0);
 		break;
 	default:
 		WARN_ON(1);
@@ -616,75 +586,6 @@ static void nuc970_emmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		nuc970_emmc_write(REG_EMMCCSR,
 				  nuc970_emmc_read(REG_EMMCCSR) & ~EMMCCSR_DBW);
 	}
-}
-
-/*
- * Handle CO, RI, and R2 event
- */
-static int emmc_event_thread(void *unused)
-{
-	int event = 0;
-	int completed = 0;
-
-	for (;;) {
-		wait_event_freezable(emmc_event_wq,
-				     (emmc_event != EMMC_EVENT_NONE)
-				     && (emmc_send_cmd));
-
-		completed = 0;
-		event = emmc_event;
-		emmc_event = EMMC_EVENT_NONE;
-		emmc_send_cmd = 0;
-		if (event & EMMC_EVENT_CMD_OUT) {
-			while (1) {
-				if (!
-				    (nuc970_emmc_read(REG_EMMCCSR) &
-				     EMMCCSR_CO_EN)) {
-					completed = 1;
-					break;
-				}
-			}
-		}
-
-		if (event & EMMC_EVENT_RSP_IN) {
-			while (1) {
-				if (!
-				    (nuc970_emmc_read(REG_EMMCCSR) &
-				     EMMCCSR_RI_EN)) {
-					completed = 1;
-					break;
-				}
-
-				if (nuc970_emmc_read(REG_EMMCISR) &
-				    EMMCISR_RITO_IF) {
-					nuc970_emmc_write(REG_EMMCTMOUT, 0x0);
-					nuc970_emmc_write(REG_EMMCISR,
-							  EMMCISR_RITO_IF);
-
-					completed = 1;
-					emmc_host->cmd->error = -ETIMEDOUT;
-					break;
-				}
-			}
-		}
-
-		if (event & EMMC_EVENT_RSP2_IN) {
-			while (1) {
-				if (!
-				    (nuc970_emmc_read(REG_EMMCCSR) &
-				     EMMCCSR_R2_EN)) {
-					completed = 1;
-					break;
-				}
-			}
-		}
-		if (completed) {
-			//nuc970_emmc_debug("Completed command\n");
-			nuc970_emmc_completed_command(emmc_host, event);
-		}
-	}
-	nuc970_emmc_debug("event quit\n");
-	return 0;
 }
 
 /*
@@ -714,6 +615,70 @@ static irqreturn_t nuc970_emmc_irq(int irq, void *devid)
 	return IRQ_HANDLED;
 }
 
+#define EMMC_TIMEOUT	10000000
+
+/*
+ * Handle CO, RI, and R2 event
+ */
+static int emmc_event_thread(struct nuc970_emmc_host *emmc_host)
+{
+	int event = 0;
+	int completed = 0;
+	unsigned int timeout = 0;
+
+	completed = 0;
+	event = emmc_event;
+	emmc_event = EMMC_EVENT_NONE;
+	if (event & EMMC_EVENT_CMD_OUT) {
+		while (timeout < EMMC_TIMEOUT) {
+			if (!(nuc970_emmc_read(REG_EMMCCSR) & EMMCCSR_CO_EN)) {
+				completed = 1;
+				break;
+			} else {
+				ndelay(100);
+				timeout++;
+			}
+		}
+	}
+
+	if (event & EMMC_EVENT_RSP_IN) {
+		while (timeout < EMMC_TIMEOUT) {
+			if (!(nuc970_emmc_read(REG_EMMCCSR) & EMMCCSR_RI_EN)) {
+				completed = 1;
+				break;
+			}
+
+			if (nuc970_emmc_read(REG_EMMCISR) & EMMCISR_RITO_IF) {
+				nuc970_emmc_write(REG_EMMCTMOUT, 0x0);
+				nuc970_emmc_write(REG_EMMCISR, EMMCISR_RITO_IF);
+
+				completed = 1;
+				emmc_host->cmd->error = -ETIMEDOUT;
+				break;
+			}
+			timeout++;
+			ndelay(100);
+		}
+	}
+
+	if (event & EMMC_EVENT_RSP2_IN) {
+		while (timeout < EMMC_TIMEOUT) {
+			if (!(nuc970_emmc_read(REG_EMMCCSR) & EMMCCSR_R2_EN)) {
+				completed = 1;
+				break;
+			} else {
+				ndelay(100);
+				timeout++;
+			}
+		}
+	}
+	if (completed)
+		nuc970_emmc_completed_command(emmc_host, event);
+
+	nuc970_emmc_debug("event quit\n");
+	return 0;
+}
+
 static int nuc970_emmc_get_ro(struct mmc_host *mmc)
 {
 	/* TODO: check write protect pin */
@@ -721,19 +686,12 @@ static int nuc970_emmc_get_ro(struct mmc_host *mmc)
 
 	/* no write protect */
 	return 0;
-
-	/*
-	 * Board doesn't support read only detection; let the mmc core
-	 * decide what to do.
-	 */
-	//return -ENOSYS;
 }
 
 static const struct mmc_host_ops nuc970_emmc_ops = {
 	.request = nuc970_emmc_request,
-	.set_ios = nuc970_emmc_set_ios,
 	.get_ro = nuc970_emmc_get_ro,
-
+	.set_ios = nuc970_emmc_set_ios,
 };
 
 /*
@@ -825,7 +783,6 @@ static int nuc970_emmc_probe(struct platform_device *pdev)
 		return ret;
 	}
 	clk_set_parent(clkmux, host->upll_clk);
-	//clk_set_rate(host->upll_clk, 33000000);
 	clk_set_rate(host->upll_clk, 10000000);
 	nuc970_emmc_disable(host);
 
@@ -878,8 +835,6 @@ static int nuc970_emmc_probe(struct platform_device *pdev)
 	}
 
 	/* add a thread to check CO, RI, and R2 */
-	kernel_thread(emmc_event_thread, NULL, 0);
-//    setup_timer(&host->timer, nuc970_emmc_timeout_timer, (unsigned long)host);
 	timer_setup(&host->timer, nuc970_emmc_timeout_timer, 0);
 	platform_set_drvdata(pdev, mmc);
 
@@ -889,7 +844,6 @@ static int nuc970_emmc_probe(struct platform_device *pdev)
 	host->present = 1;
 
 	mmc_add_host(mmc);
-	printk("Added NUC970 EMMC driver\n");
 	nuc970_emmc_debug("Added NUC970 EMMC driver\n");
 	return 0;
 
