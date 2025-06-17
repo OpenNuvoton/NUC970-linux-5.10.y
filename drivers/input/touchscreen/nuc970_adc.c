@@ -66,8 +66,8 @@
 #define ADC_CONF_NACEN		(1 << 2)
 #define ADC_CONF_HSPEED		(1 << 22)
 
-#define ADC_CONF_CHSEL_POS	12
-#define ADC_CONF_CHSEL_MSK	(7 << 12)
+#define ADC_CONF_CHSEL_POS	3
+#define ADC_CONF_CHSEL_MSK	(7 << 3)
 
 #define ADC_CONF_REFSEL_POS	6
 #define ADC_CONF_REFSEL_MSK	(3 << 6)
