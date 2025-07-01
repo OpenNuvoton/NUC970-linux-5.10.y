@@ -29,8 +29,6 @@
 #include <linux/mtd/partitions.h>
 #include <linux/pwm_backlight.h>
 
-#include <linux/spi/spi.h>
-#include <linux/spi/flash.h>
 #include <linux/pwm.h>
 
 #include <asm/mach/arch.h>
@@ -53,7 +51,6 @@
 
 #include <linux/platform_data/i2c-nuc970.h>
 #include <linux/platform_data/video-nuc970fb.h>
-#include <linux/platform_data/spi-nuc970.h>
 #include <linux/platform_data/dma-nuc970.h>
 #include <linux/platform_data/keypad-nuc970.h>
 
@@ -725,109 +722,6 @@ struct platform_device nuc970_device_i2c1 = {
 };
 #endif
 
-/* SPI */
-#if defined(CONFIG_SPI_NUC970_P0) || defined(CONFIG_SPI_NUC970_P0_MODULE)
-/* spi device, spi flash info */
-#ifdef CONFIG_MTD_M25P80
-static struct mtd_partition nuc970_spi0_flash_partitions[] = {
- #ifdef CONFIG_BOARD_ETH2UART
-         {
-                .name = "kernel",
-                .size = 0x0800000,
-                .offset = 0x1000000,
-        },
-        {
-                .name = "rootfs",
-                .size = 0x0800000,
-                .offset = 0x1800000,
-        },
- #else
-        {
-                .name = "kernel",
-                .size = 0x0800000,
-                .offset = 0,
-        },
-        {
-                .name = "rootfs",
-                .size = 0x0800000,
-                .offset = 0x0800000,
-        },
- #endif
-};
-static struct flash_platform_data nuc970_spi0_flash_data = {
-        .name = "m25p80",
-        .parts =  nuc970_spi0_flash_partitions,
-        .nr_parts = ARRAY_SIZE(nuc970_spi0_flash_partitions),
-        .type = "w25q128",
-};
-#endif
-
-static struct resource nuc970_spi0_resource[] = {
-        [0] = {
-                .start = NUC970_PA_SPI0,
-                .end   = NUC970_PA_SPI0 + NUC970_SZ_SPI0 - 1,
-                .flags = IORESOURCE_MEM,
-        },
-        [1] = {
-                .start = IRQ_SPI0,
-                .end   = IRQ_SPI0,
-                .flags = IORESOURCE_IRQ,
-        }
-};
-
-struct platform_device nuc970_device_spi0 = {
-        .name		  = "nuc970-spi0",
-        .id		  = -1,
-        .num_resources	  = ARRAY_SIZE(nuc970_spi0_resource),
-        .resource	  = nuc970_spi0_resource,
-#if defined(CONFIG_MTD_M25P80) || defined(CONFIG_SPI_SPIDEV)
-        .dev		= {
-                .platform_data = &nuc970_spi0_platform_data,
-    }
-#endif
-};
-#endif
-
-#if defined(CONFIG_SPI_NUC970_P1) || defined(CONFIG_SPI_NUC970_P1_MODULE)
-
-#ifdef CONFIG_SPI_SPIDEV
-static struct spi_board_info nuc970_spi1_board_info[] __initdata = {
-        {
-                .modalias = "spidev",
-                .max_speed_hz = 18750000,
-                .bus_num = 1,
-                .chip_select = 0,       //use SS0
-                .mode = SPI_MODE_0,
-        },
-};
-#endif
-
-static struct resource nuc970_spi1_resource[] = {
-        [0] = {
-                .start = NUC970_PA_SPI1,
-                .end   = NUC970_PA_SPI1 + NUC970_SZ_SPI1 - 1,
-                .flags = IORESOURCE_MEM,
-        },
-        [1] = {
-                .start = IRQ_SPI1,
-                .end   = IRQ_SPI1,
-                .flags = IORESOURCE_IRQ,
-        }
-};
-
-struct platform_device nuc970_device_spi1 = {
-        .name		  = "nuc970-spi1",
-        .id		  = -1,
-        .num_resources	  = ARRAY_SIZE(nuc970_spi1_resource),
-        .resource	  = nuc970_spi1_resource,
-#if defined(CONFIG_MTD_M25P80) || defined(CONFIG_SPI_SPIDEV)
-        .dev		= {
-                .platform_data = &nuc970_spi1_platform_data,
-		}
-#endif
-};
-#endif
-
 #if defined(CONFIG_KEYBOARD_NUC970) || defined(CONFIG_KEYBOARD_NUC970_MODULE)
 static int nuc970_keymap[] = {
 	KEY(0, 0, KEY_A),	KEY(0, 1, KEY_B),
@@ -1303,16 +1197,6 @@ struct platform_device nuc970_pwm_bl = {
 void __init nuc970_platform_init(struct platform_device **device, int size)
 {
 printk("=========================>nuc970_platform_init\n");
-
-#if defined(CONFIG_MTD_M25P80) || defined(CONFIG_SPI_SPIDEV) || defined(CONFIG_SPI_SPIDEV_MODULE)
- 	/* register spi devices */
-#if defined(CONFIG_SPI_NUC970_P0) || defined(CONFIG_SPI_NUC970_P0_MODULE)
-	spi_register_board_info(nuc970_spi0_board_info, ARRAY_SIZE(nuc970_spi0_board_info));
-#endif
-#if defined(CONFIG_SPI_NUC970_P1) || defined(CONFIG_SPI_NUC970_P1_MODULE)
-    spi_register_board_info(nuc970_spi1_board_info, ARRAY_SIZE(nuc970_spi1_board_info));
-#endif
-#endif
 
 #if defined(CONFIG_I2C_BUS_NUC970_P0) || defined(CONFIG_I2C_BUS_NUC970_P0_MODULE)
 	i2c_register_board_info(0, nuc970_i2c_clients0, sizeof(nuc970_i2c_clients0)/sizeof(struct i2c_board_info));
