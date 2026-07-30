@@ -47,6 +47,7 @@
 
 extern void nuc970_timer_init(void);
 extern void __init nuc970_map_io(void);
+extern void __init nuc970_reserve_memory(void);
 extern int __init nuc970_of_init_irq(struct device_node *node, struct device_node *parent);
 
 
@@ -88,6 +89,7 @@ DT_MACHINE_START(nuc970_dt, "Nuvoton NUC972 (Device Tree)")
     .init_machine   = nuc970_dt_device_init,
     .dt_compat      = nuc970_dt_board_compat,
 	.init_late	    = nuc970_init_late,
+    .reserve        = nuc970_reserve_memory,
     .restart        = nuc970_restart,
 MACHINE_END
 

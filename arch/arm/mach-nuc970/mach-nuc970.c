@@ -83,10 +83,11 @@ static void __init nuc970_init_late(void)
 	nuc970_init_suspend();
 }
 
-static void __init nuc970_reserve_memory(void)
+void __init nuc970_reserve_memory(void)
 {
-	if(memblock_reserve(0, 1024) < 0)
-		printk("Failed to reserve memory 0x0~0x400\n");
+	if (memblock_reserve(0, PAGE_SIZE) < 0)
+		pr_err("Failed to reserve memory 0x0~0x%lx\n",
+		       PAGE_SIZE);
 }
 
 #ifdef CONFIG_CPU_NUC970
